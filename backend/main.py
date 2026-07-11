@@ -180,3 +180,7 @@ async def negotiate_ws(websocket: WebSocket, agent_a_id: str, agent_b_id: str):
         await websocket.close()
     except WebSocketDisconnect:
         pass
+
+@app.get("/")
+def root():
+    return {"status": "AgentAIM backend running", "docs": "/docs"}
