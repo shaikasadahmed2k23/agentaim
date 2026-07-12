@@ -675,6 +675,45 @@ body::after {
   overflow: hidden;
 }
 
+/* wallpaper scene — horizon glow + soft globe orb, sits behind everything */
+.os-wallpaper {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.os-wallpaper-svg { width: 100%; height: 100%; display: block; }
+
+/* top-right status badge, a nod to the reference event page's info card */
+.os-topbar-badge {
+  position: absolute;
+  top: 22px;
+  right: 26px;
+  z-index: 2;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+  text-align: right;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.os-topbar-badge-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: var(--cyan-glow);
+  text-shadow: 0 0 12px rgba(79,240,255,0.5);
+}
+.os-topbar-badge-sub {
+  font-size: 10.5px;
+  color: var(--ink-dim);
+  margin-top: 2px;
+}
+
 /* desktop icon grid, top-left, old-OS style */
 .os-icons {
   position: absolute;
@@ -882,7 +921,9 @@ body::after {
   flex-direction: column;
   border-radius: 12px;
   overflow: hidden;
-  background: var(--void-mid);
+  background:
+    radial-gradient(ellipse 700px 400px at 20% 0%, rgba(125,180,255,0.12), transparent 60%),
+    linear-gradient(160deg, #10203e 0%, var(--void-mid) 45%, #081020 100%);
   border: 1px solid var(--glass-border);
   box-shadow: 0 24px 70px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
 }

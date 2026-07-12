@@ -32,6 +32,61 @@ function ChromeShard() {
   );
 }
 
+// A proper wallpaper scene — soft horizon glow + a glowing orb, the same
+// "sky / horizon / globe" composition the reference mood board used, done
+// in AgentAIM's own chrome/cyan palette instead of a flat gradient.
+function WallpaperScene() {
+  return (
+    <div className="os-wallpaper" aria-hidden="true">
+      <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMax slice" className="os-wallpaper-svg">
+        <defs>
+          <radialGradient id="orbGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#eafcff" stopOpacity="0.95" />
+            <stop offset="35%" stopColor="#4ff0ff" stopOpacity="0.55" />
+            <stop offset="100%" stopColor="#0d1c36" stopOpacity="0" />
+          </radialGradient>
+          <linearGradient id="horizonFade" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#0d1c36" stopOpacity="0" />
+            <stop offset="100%" stopColor="#050a16" stopOpacity="0.9" />
+          </linearGradient>
+        </defs>
+        <circle cx="1080" cy="230" r="260" fill="url(#orbGlow)" />
+        <circle cx="1080" cy="230" r="120" fill="none" stroke="#7db4ff" strokeWidth="1" opacity="0.4" />
+        <circle cx="1080" cy="230" r="165" fill="none" stroke="#4ff0ff" strokeWidth="0.75" opacity="0.3" />
+        <rect x="0" y="560" width="1440" height="340" fill="url(#horizonFade)" />
+        <path d="M0,650 Q360,560 720,610 T1440,600 V900 H0 Z" fill="#0a1730" opacity="0.75" />
+        <path d="M0,700 Q400,630 800,670 T1440,660 V900 H0 Z" fill="#081226" opacity="0.85" />
+      </svg>
+    </div>
+  );
+}
+
+// Top-right "AgentAIM OS" status badge — a nod to the reference site's
+// top-right event-info card, giving the top of the desktop some content.
+function TopStatusBadge() {
+  return (
+    <div className="os-topbar-badge">
+      <div className="os-topbar-badge-title">AGENTAIM OS</div>
+      <div className="os-topbar-badge-sub">Web of trust for AI agents — RIFT 2026</div>
+    </div>
+  );
+}
+
+// Real GitHub mark (Octicon), used on the desktop/taskbar instead of an emoji.
+function GithubGlyph() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
+        0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13
+        -.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07
+        -1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21
+        2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12
+        .51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48
+        0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z" />
+    </svg>
+  );
+}
+
 // Generic retro window frame — used for the AgentAIM app window and the
 // About popup. Handles the titlebar + the 3 controls ( _ □ X ).
 function RetroWindow({ title, iconSrc, iconGlyph, maximized, small, onMinimize, onMaximizeToggle, onClose, children }) {
@@ -56,7 +111,7 @@ const DESKTOP_ICONS = [
   { id: "agentaim", label: "AgentAIM", iconSrc: "/favicon.png", action: "open-app" },
   { id: "portfolio", label: "Portfolio", iconGlyph: "🧑‍💻", action: "open-portfolio" },
   { id: "about", label: "About.txt", iconGlyph: "📄", action: "open-about" },
-  { id: "github", label: "GitHub", iconGlyph: "🐙", action: "open-github" },
+  { id: "github", label: "GitHub", iconGlyph: <GithubGlyph />, action: "open-github" },
 ];
 
 export default function Desktop() {
@@ -100,7 +155,7 @@ export default function Desktop() {
   const startMenuItems = [
     { id: "agentaim", label: "Open AgentAIM", glyph: "🛰️", action: "open-app" },
     { id: "portfolio", label: "My Portfolio", glyph: "🧑‍💻", action: "open-portfolio" },
-    { id: "github", label: "View Source (GitHub)", glyph: "🐙", action: "open-github" },
+    { id: "github", label: "View Source (GitHub)", glyph: <GithubGlyph />, action: "open-github" },
     { id: "about", label: "About AgentAIM", glyph: "📄", action: "open-about" },
   ].filter((item) => item.label.toLowerCase().includes(search.toLowerCase()));
 
@@ -108,7 +163,9 @@ export default function Desktop() {
 
   return (
     <div className="os-desktop" onClick={() => setSelectedIcon(null)}>
+      <WallpaperScene />
       <ChromeShard />
+      <TopStatusBadge />
 
       <div className="os-icons">
         {DESKTOP_ICONS.map((icon) => (
