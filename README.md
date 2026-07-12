@@ -8,7 +8,9 @@
 > a fake "trust score," but with a real, historically-accurate revival of **PGP's Web
 > of Trust** (key-signing parties, 2000s crypto culture), skinned as a Cyber-Y2K
 > revival of the AIM buddy list — chrome, glass, and glowing signal traces instead of
-> a flat XP theme.
+> a flat XP theme. It now also lives inside a full retro **desktop OS shell** —
+> icons, taskbar, Start menu, and a windowed app — the way you'd have actually
+> launched a buddy-list client back then.
 
 ---
 
@@ -44,7 +46,7 @@ and verify trust **live**.
 | Criterion | How AgentAIM addresses it |
 |---|---|
 | Creativity & Originality | Revives an obscure but real 2000s system (PGP Web of Trust) instead of the obvious "reskin a popular app" approach |
-| UI Authenticity to 2000s | Cyber-Y2K revival — chrome-gradient window chrome, glass panels, glowing signal traces, CRT-grain texture, synthesized retro sound effects — not just a flat XP theme clone |
+| UI Authenticity to 2000s | A full desktop-OS shell (icons, taskbar, Start menu, windowed app) wrapping a Cyber-Y2K revival of the AIM buddy list — chrome-gradient window chrome, glass panels, glowing signal traces, CRT-grain texture, synthesized retro sound effects — the retro-desktop structure the hackathon's own branding uses, skinned in AgentAIM's own identity rather than a flat XP clone |
 | Functionality & Usability | Working MVP: buddy list, live negotiation, transitive trust computation, graph visualization, revocation, Sybil detection, identity portability |
 | Technical Execution | Real Ed25519 signing/verification (not a mocked score), BFS trust-path search, WebSocket-streamed negotiation, graph-theoretic Sybil detection |
 | Presentation & Demo | Built-in "inject rogue agent" and "simulate Sybil ring" buttons give dramatic, provable moments for judges without needing manual setup |
@@ -53,6 +55,8 @@ and verify trust **live**.
 ---
 
 ## Architecture
+
+```
 agentaim/
 ├── backend/                  FastAPI — agents, signatures, trust graph, negotiation
 │   ├── main.py                 REST + WebSocket endpoints
@@ -62,20 +66,27 @@ agentaim/
 │   ├── store.py                 Agent/signature store, revocation, identity export/import
 │   ├── db.py                    SQLite persistence + schema migration
 │   └── .python-version          pins Python 3.11.9 for Render (pydantic-core wheel compat)
-└── frontend/                 React + Vite — Cyber-Y2K AIM-styled UI
-└── src/
-├── App.jsx                top-level layout, state, Sybil banner
-├── api.js                 REST + WebSocket client
-├── sounds.js               synthesized retro SFX (Web Audio API)
-├── index.css               design tokens, glass/chrome theme
-└── components/
-├── BuddyList.jsx        buddy list, add/import/inject/simulate actions
-├── ChatWindow.jsx        live negotiation over WebSocket
-├── TrustGraph.jsx        trust visualization, animated path trace, Sybil rings
-├── BuddyProfile.jsx      profile modal, revocation controls, identity export
-├── XPWindow.jsx          reusable glass-chrome window wrapper
-├── AddAgentModal.jsx     new/rogue agent creation
-└── SplashScreen.jsx      dial-up-style loading screen
+└── frontend/                 React + Vite — Cyber-Y2K AIM-styled UI, inside a desktop OS shell
+    └── src/
+        ├── main.jsx                entry point — now mounts <Desktop />, not <App /> directly
+        ├── App.jsx                 the AgentAIM app itself (buddy list / chat / trust graph),
+        │                           now rendered *inside* a window rather than full-page
+        ├── api.js                  REST + WebSocket client
+        ├── sounds.js               synthesized retro SFX (Web Audio API)
+        ├── index.css               design tokens, glass/chrome theme + desktop-OS shell styles
+        └── components/
+            ├── Desktop.jsx         NEW — the OS shell: wallpaper, desktop icons (AgentAIM,
+            │                       Portfolio, About.txt, GitHub), taskbar, Start menu with
+            │                       search, and the retro window frame (_ □ × controls) that
+            │                       AgentAIM opens inside
+            ├── BuddyList.jsx       buddy list, add/import/inject/simulate actions
+            ├── ChatWindow.jsx      live negotiation over WebSocket
+            ├── TrustGraph.jsx      trust visualization, animated path trace, Sybil rings
+            ├── BuddyProfile.jsx    profile modal, revocation controls, identity export
+            ├── XPWindow.jsx        reusable glass-chrome window wrapper (used inside the app)
+            ├── AddAgentModal.jsx   new/rogue agent creation
+            └── SplashScreen.jsx    dial-up-style loading screen
+```
 
 ## Running it locally
 
@@ -111,9 +122,38 @@ Visit the printed local URL (default `http://localhost:5173`). It talks to the
 backend at `http://localhost:8811` by default — change `VITE_API_URL` in
 `frontend/.env` if you deploy the backend elsewhere.
 
+On load you'll land on the **desktop**, not the app directly — double-click the
+**AgentAIM** icon (top-left) to open the actual buddy-list app in a window.
+
 ---
 
 ## Features
+
+### Desktop OS shell (new)
+
+The app now lives inside a retro desktop environment instead of opening full-page,
+matching the "boot into an OS, then launch the app" structure of the hackathon's own
+branding — while staying in AgentAIM's own Cyber-Y2K chrome/glass language rather
+than becoming a literal gray Windows-98 clone.
+
+- **Desktop icons** — double-click to launch:
+  - **AgentAIM** (real favicon) → opens the app itself in a window
+  - **Portfolio** → opens the builder's portfolio site in a new tab
+  - **About.txt** → a small in-theme popup describing the project
+  - **GitHub** → opens this repo in a new tab
+- **Taskbar** — Start button, a running-app pill for AgentAIM once it's open (click
+  to minimize/restore), and a live clock.
+- **Start menu** — same four actions as the desktop icons, plus a working search box
+  that filters the menu list as you type.
+- **Windowed app** — AgentAIM opens in a window with the classic three controls:
+  - `_` minimizes to the taskbar (app state is preserved, just hidden)
+  - `□` toggles between a large centered window (desktop visible around the edges,
+    like a real 2000s OS) and a bigger near-fullscreen size
+  - `×` closes the window back to a clean desktop
+
+`Desktop.jsx` is the only new file — it wraps the existing `App.jsx` unchanged; all
+of the trust-graph/negotiation logic below still works exactly as before, just
+inside a window instead of taking the whole page.
 
 ### Core web of trust
 - Real Ed25519 keypairs, generated per agent, never leaving the backend's in-memory
@@ -168,6 +208,7 @@ Glass-chrome windows with a diagonal titlebar sheen, glowing chrome-orb trust-gr
 nodes, a faceted chrome-shard accent motif, faint CRT scanline grain, and a
 retro dial-up splash screen with a synthesized modem-handshake sound — the "Cybercore"
 2000s aesthetic (translucent hardware, early internet futurism), not a flat XP clone.
+This is now wrapped in the desktop OS shell described above.
 
 ---
 
@@ -175,13 +216,15 @@ retro dial-up splash screen with a synthesized modem-handshake sound — the "Cy
 
 See `DEMO_SCRIPT.md` (or the walkthrough below) for a full talk-track. Short version:
 
-1. Show the buddy list — real signature history, warn levels, live status.
-2. Negotiate with NewBot — watch a 2-hop transitive trust path get verified live.
-3. Inject a rogue agent — watch it get rejected, warn level rise, eventual auto-block.
-4. Revoke a signature live — watch a previously trusted path break in real time.
-5. Simulate a Sybil ring — watch the detector flag it algorithmically, live.
-6. Export an identity, reset the demo, re-import it — prove persistence is real.
-7. Open `trust_graph.py` — show judges the actual `Ed25519PublicKey.verify()` call.
+1. Land on the desktop — point out the icons, taskbar, Start menu with search.
+2. Double-click AgentAIM to open the app in its window — show the buddy list, real
+   signature history, warn levels, live status.
+3. Negotiate with NewBot — watch a 2-hop transitive trust path get verified live.
+4. Inject a rogue agent — watch it get rejected, warn level rise, eventual auto-block.
+5. Revoke a signature live — watch a previously trusted path break in real time.
+6. Simulate a Sybil ring — watch the detector flag it algorithmically, live.
+7. Export an identity, reset the demo, re-import it — prove persistence is real.
+8. Open `trust_graph.py` — show judges the actual `Ed25519PublicKey.verify()` call.
    Nothing here is a mocked trust score.
 
 ---
@@ -214,3 +257,6 @@ for — export an agent's identity as a safety net before a live demo.
   all keypairs live in one in-memory/SQLite-backed store for the hackathon build.
   In a production version, each agent would generate and hold its own private key
   locally and only ever publish its public key.
+- **Cosmetic:** the Portfolio, About.txt, and GitHub desktop icons are static
+  links/info — they're part of the desktop-OS presentation layer, not part of the
+  trust-graph system being judged.

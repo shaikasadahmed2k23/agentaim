@@ -88,34 +88,8 @@ export default function App() {
   const restoreAll = () => setWindows({ buddyList: true, chat: true, graph: true });
 
   return (
-    <div className="desktop">
+    <div className="app-shell">
       {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
-
-      <svg
-        className="chrome-shard"
-        viewBox="0 0 600 500"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <defs>
-          <linearGradient id="shardChrome1" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#eef5ff" />
-            <stop offset="45%" stopColor="#7db4ff" />
-            <stop offset="100%" stopColor="#0d1c36" />
-          </linearGradient>
-          <linearGradient id="shardChrome2" x1="100%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#4ff0ff" />
-            <stop offset="60%" stopColor="#3d8bff" />
-            <stop offset="100%" stopColor="#0d1c36" />
-          </linearGradient>
-        </defs>
-        <polygon points="600,0 600,260 380,120 460,0" fill="url(#shardChrome1)" />
-        <polygon points="600,260 600,500 340,340 380,120" fill="url(#shardChrome2)" />
-        <polygon points="460,0 380,120 260,40 340,0" fill="url(#shardChrome1)" opacity="0.8" />
-        <polygon points="340,120 380,120 340,340 230,220" fill="url(#shardChrome2)" opacity="0.55" />
-        <line x1="380" y1="120" x2="600" y2="260" stroke="#eef5ff" strokeWidth="1.5" opacity="0.5" />
-        <line x1="340" y1="340" x2="600" y2="260" stroke="#4ff0ff" strokeWidth="1.5" opacity="0.5" />
-      </svg>
 
       <div className="desktop-header">
         <h1>AgentAIM</h1>
