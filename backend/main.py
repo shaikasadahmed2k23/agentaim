@@ -30,11 +30,40 @@ class SignRequest(BaseModel):
     subject_id: str
 
 
+class RevokeRequest(BaseModel):
+    signer_id: str
+    subject_id: str
+
+
 class NewAgentRequest(BaseModel):
     name: str
     avatar: str = "🤖"
     bio: str = ""
     malicious: bool = False
+
+
+class SignatureImport(BaseModel):
+    signer_id: str
+    subject_id: str
+    message: str
+    signature: str
+    timestamp: float
+    revoked: bool = False
+    revoked_at: float | None = None
+
+
+class ImportIdentityRequest(BaseModel):
+    id: str
+    name: str
+    avatar: str = "🤖"
+    bio: str = ""
+    status: str = "online"
+    public_key: str
+    private_key: str = ""
+    warn_level: int = 0
+    created_at: float | None = None
+    signatures_received: list[SignatureImport] = []
+    signatures_given: list[SignatureImport] = []
 
 
 @app.get("/api/health")
@@ -48,7 +77,7 @@ def list_agents():
     for a in store.agents.values():
         agent_data = store.public_agent(a)
         agent_data["signature_count"] = sum(
-            1 for s in store.signatures if s["subject_id"] == a["id"]
+            1 for s in store.signatures if s["subject_id"] == a["id"] and not s.get("revoked")
         )
         result.append(agent_data)
     return result
@@ -68,6 +97,8 @@ def get_agent(agent_id: str):
             "signer_id": s["signer_id"],
             "signer_name": store.agents[s["signer_id"]]["name"] if s["signer_id"] in store.agents else s["signer_id"],
             "timestamp": s["timestamp"],
+            "revoked": bool(s.get("revoked")),
+            "revoked_at": s.get("revoked_at"),
         }
         for s in store.signatures if s["subject_id"] == agent_id
     ]
@@ -76,6 +107,8 @@ def get_agent(agent_id: str):
             "subject_id": s["subject_id"],
             "subject_name": store.agents[s["subject_id"]]["name"] if s["subject_id"] in store.agents else s["subject_id"],
             "timestamp": s["timestamp"],
+            "revoked": bool(s.get("revoked")),
+            "revoked_at": s.get("revoked_at"),
         }
         for s in store.signatures if s["signer_id"] == agent_id
     ]
@@ -102,6 +135,48 @@ def sign(req: SignRequest):
         raise HTTPException(404, "Unknown agent")
     record = store.add_signature(req.signer_id, req.subject_id)
     return {"ok": True, "record": {k: v for k, v in record.items()}}
+
+
+@app.post("/api/revoke")
+def revoke(req: RevokeRequest):
+    """PGP-style revocation — only the original signer can withdraw their own
+    attestation. The trust graph immediately stops treating it as a valid edge."""
+    if req.signer_id not in store.agents or req.subject_id not in store.agents:
+        raise HTTPException(404, "Unknown agent")
+    record = store.revoke_signature(req.signer_id, req.subject_id)
+    if not record:
+        raise HTTPException(404, "No active signature found from that signer to that subject")
+    return {"ok": True, "record": record}
+
+
+@app.get("/api/sybil-clusters")
+def sybil_clusters(self_id: str = "shopbot"):
+    """Flags islands of agents that only ever vouch for each other, disconnected
+    from your own web of trust — a fabricated-trust / Sybil-ring pattern."""
+    return {"clusters": trust_graph.detect_sybil_clusters(self_id)}
+
+
+@app.post("/api/simulate-sybil-ring")
+def simulate_sybil_ring():
+    """Demo helper — spins up two agents that only sign each other, off in
+    their own island, so the Sybil detector has something real to catch."""
+    created = store.simulate_sybil_ring()
+    return {"ok": True, "agents": created}
+
+
+@app.get("/api/agents/{agent_id}/export")
+def export_identity(agent_id: str):
+    data = store.export_identity(agent_id)
+    if not data:
+        raise HTTPException(404, "Agent not found")
+    return data
+
+
+@app.post("/api/agents/import")
+def import_identity(req: ImportIdentityRequest):
+    payload = req.model_dump()
+    result = store.import_identity(payload)
+    return result
 
 
 @app.post("/api/agents")

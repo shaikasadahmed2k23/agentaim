@@ -3,6 +3,10 @@ dist/
 __pycache__/
 *.pyc
 myenv/
+venv/
 .env
+.env.local
+.vercel/
+*.log
 .DS_Store
 *.db

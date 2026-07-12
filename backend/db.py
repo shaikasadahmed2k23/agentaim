@@ -37,11 +37,24 @@ def init_db():
             subject_id TEXT,
             message TEXT,
             signature TEXT,
-            timestamp REAL
+            timestamp REAL,
+            revoked INTEGER DEFAULT 0,
+            revoked_at REAL
         )
     """)
+    _migrate(conn)
     conn.commit()
     conn.close()
+
+
+def _migrate(conn):
+    """Add columns introduced after the original schema, so an existing
+    agentaim.db from a prior run doesn't crash on missing columns."""
+    cols = [r["name"] for r in conn.execute("PRAGMA table_info(signatures)")]
+    if "revoked" not in cols:
+        conn.execute("ALTER TABLE signatures ADD COLUMN revoked INTEGER DEFAULT 0")
+    if "revoked_at" not in cols:
+        conn.execute("ALTER TABLE signatures ADD COLUMN revoked_at REAL")
 
 
 def has_data() -> bool:
@@ -55,8 +68,10 @@ def load_all():
     conn = get_conn()
     agents = {row["id"]: dict(row) for row in conn.execute("SELECT * FROM agents")}
     signatures = [dict(row) for row in conn.execute(
-        "SELECT signer_id, subject_id, message, signature, timestamp FROM signatures"
+        "SELECT signer_id, subject_id, message, signature, timestamp, revoked, revoked_at FROM signatures"
     )]
+    for s in signatures:
+        s["revoked"] = bool(s["revoked"])
     conn.close()
     return agents, signatures
 
@@ -74,12 +89,39 @@ def save_agent(agent: dict):
     conn.close()
 
 
+def upsert_agent_full(agent: dict):
+    """Like save_agent, but also overwrites the keypair — used for identity import,
+    where the whole point is replacing this agent's keys with the imported ones."""
+    conn = get_conn()
+    conn.execute("""
+        INSERT INTO agents (id, name, avatar, status, public_key, private_key, warn_level, bio, created_at)
+        VALUES (:id, :name, :avatar, :status, :public_key, :private_key, :warn_level, :bio, :created_at)
+        ON CONFLICT(id) DO UPDATE SET
+            name=excluded.name, avatar=excluded.avatar, status=excluded.status,
+            public_key=excluded.public_key, private_key=excluded.private_key,
+            warn_level=excluded.warn_level, bio=excluded.bio, created_at=excluded.created_at
+    """, agent)
+    conn.commit()
+    conn.close()
+
+
 def save_signature(sig: dict):
     conn = get_conn()
     conn.execute("""
-        INSERT INTO signatures (signer_id, subject_id, message, signature, timestamp)
-        VALUES (:signer_id, :subject_id, :message, :signature, :timestamp)
-    """, sig)
+        INSERT INTO signatures (signer_id, subject_id, message, signature, timestamp, revoked, revoked_at)
+        VALUES (:signer_id, :subject_id, :message, :signature, :timestamp, :revoked, :revoked_at)
+    """, {**sig, "revoked": int(bool(sig.get("revoked", False))), "revoked_at": sig.get("revoked_at")})
+    conn.commit()
+    conn.close()
+
+
+def revoke_signature(signer_id: str, subject_id: str, signature_b64: str, revoked_at: float):
+    """Marks the most recent matching non-revoked signature row as revoked."""
+    conn = get_conn()
+    conn.execute("""
+        UPDATE signatures SET revoked = 1, revoked_at = ?
+        WHERE signer_id = ? AND subject_id = ? AND signature = ? AND revoked = 0
+    """, (revoked_at, signer_id, subject_id, signature_b64))
     conn.commit()
     conn.close()
 

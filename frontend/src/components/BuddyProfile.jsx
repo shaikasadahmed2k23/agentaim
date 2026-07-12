@@ -1,9 +1,26 @@
 import { useEffect, useState } from "react";
 import XPWindow from "./XPWindow";
-import { getAgentDetail } from "../api";
+import { getAgentDetail, revokeSignature, exportIdentity } from "../api";
 
-export default function BuddyProfile({ agentId, onClose }) {
+function downloadJson(filename, data) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+export default function BuddyProfile({ agentId, onClose, onChanged }) {
   const [data, setData] = useState(null);
+  const [revoking, setRevoking] = useState(null); // subject_id currently being revoked
+
+  const load = () => {
+    getAgentDetail(agentId).then(setData);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -12,6 +29,22 @@ export default function BuddyProfile({ agentId, onClose }) {
     });
     return () => { cancelled = true; };
   }, [agentId]);
+
+  const handleRevoke = async (subjectId) => {
+    setRevoking(subjectId);
+    try {
+      await revokeSignature(agentId, subjectId);
+      load();
+      if (onChanged) await onChanged();
+    } finally {
+      setRevoking(null);
+    }
+  };
+
+  const handleExport = async () => {
+    const identity = await exportIdentity(agentId);
+    downloadJson(`${agentId}-identity.json`, identity);
+  };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -48,8 +81,9 @@ export default function BuddyProfile({ agentId, onClose }) {
                   <div className="profile-empty">No one has vouched for this agent yet.</div>
                 )}
                 {data.signatures_received.map((s, i) => (
-                  <div key={i} className="profile-sig-row">
-                    ✅ signed by <strong>{s.signer_name}</strong>
+                  <div key={i} className={`profile-sig-row${s.revoked ? " revoked" : ""}`}>
+                    {s.revoked ? "🚫 revoked — was signed by" : "✅ signed by"}{" "}
+                    <strong>{s.signer_name}</strong>
                   </div>
                 ))}
 
@@ -60,13 +94,27 @@ export default function BuddyProfile({ agentId, onClose }) {
                   <div className="profile-empty">This agent hasn't vouched for anyone yet.</div>
                 )}
                 {data.signatures_given.map((s, i) => (
-                  <div key={i} className="profile-sig-row">
-                    🔏 vouched for <strong>{s.subject_name}</strong>
+                  <div key={i} className={`profile-sig-row${s.revoked ? " revoked" : ""}`}>
+                    {s.revoked ? "🚫 revoked — vouched for" : "🔏 vouched for"}{" "}
+                    <strong>{s.subject_name}</strong>
+                    {!s.revoked && (
+                      <button
+                        className="revoke-link"
+                        disabled={revoking === s.subject_id}
+                        onClick={() => handleRevoke(s.subject_id)}
+                        title="Withdraw this attestation — like a PGP revocation certificate"
+                      >
+                        {revoking === s.subject_id ? "revoking…" : "revoke"}
+                      </button>
+                    )}
                   </div>
                 ))}
               </>
             )}
             <div className="modal-actions">
+              {data && (
+                <button className="export-btn" onClick={handleExport}>⭳ Export identity</button>
+              )}
               <button className="add-agent-btn" style={{ width: "auto" }} onClick={onClose}>Close</button>
             </div>
           </div>

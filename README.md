@@ -6,8 +6,9 @@
 > lists. AI agents are about to start browsing, buying, and negotiating online with
 > zero equivalent trust infrastructure. AgentAIM builds that missing piece — not with
 > a fake "trust score," but with a real, historically-accurate revival of **PGP's Web
-> of Trust** (key-signing parties, 2000s crypto culture), skinned as a nostalgic AIM
-> buddy list.
+> of Trust** (key-signing parties, 2000s crypto culture), skinned as a Cyber-Y2K
+> revival of the AIM buddy list — chrome, glass, and glowing signal traces instead of
+> a flat XP theme.
 
 ---
 
@@ -29,43 +30,52 @@ and verify trust **live**.
   over cryptographically verified edges only.
 - A forged or tampered signature is **provably rejected** — it fails independent
   verification against the signer's public key, so it simply isn't a valid edge in
-  the graph. This is demoable live (see below).
+  the graph.
+- Trust isn't just built, it can be **withdrawn**. Signatures can be revoked by the
+  original signer — a real PGP revocation certificate, not a UI toggle — and the
+  trust graph updates the instant that happens.
+- The web of trust can be **attacked**, and the system knows it: a Sybil-cluster
+  detector flags islands of agents that only ever vouch for each other with no
+  connection to the wider network — a classic fabricated-trust pattern, caught
+  algorithmically rather than by convention.
 
 ## Judging criteria fit
 
 | Criterion | How AgentAIM addresses it |
 |---|---|
 | Creativity & Originality | Revives an obscure but real 2000s system (PGP Web of Trust) instead of the obvious "reskin a popular app" approach |
-| UI Authenticity to 2000s | Full Windows XP Luna chrome + AIM buddy-list UX, Tahoma type, beveled windows, synthesized retro sound effects |
-| Functionality & Usability | Working MVP: buddy list, live negotiation, transitive trust computation, graph visualization |
-| Technical Execution | Real Ed25519 signing/verification (not a mocked score), BFS trust-path search, WebSocket-streamed negotiation |
-| Presentation & Demo | Built-in "inject rogue agent" button gives a dramatic, provable rejection moment for judges |
+| UI Authenticity to 2000s | Cyber-Y2K revival — chrome-gradient window chrome, glass panels, glowing signal traces, CRT-grain texture, synthesized retro sound effects — not just a flat XP theme clone |
+| Functionality & Usability | Working MVP: buddy list, live negotiation, transitive trust computation, graph visualization, revocation, Sybil detection, identity portability |
+| Technical Execution | Real Ed25519 signing/verification (not a mocked score), BFS trust-path search, WebSocket-streamed negotiation, graph-theoretic Sybil detection |
+| Presentation & Demo | Built-in "inject rogue agent" and "simulate Sybil ring" buttons give dramatic, provable moments for judges without needing manual setup |
 | AI Integration (bonus) | The negotiation itself is LLM-driven (Groq / llama-3.3-70b-versatile) reasoning over real trust context — not decorative AI |
 
 ---
 
 ## Architecture
-
-```
 agentaim/
-├── backend/            FastAPI — agents, signatures, trust graph, negotiation
-│   ├── main.py          REST + WebSocket endpoints
-│   ├── crypto_utils.py   Ed25519 keygen / sign / verify
-│   ├── trust_graph.py    Web-of-trust BFS + graph builder
-│   ├── negotiation.py    LLM negotiation (Groq) with scripted fallback
-│   └── store.py          In-memory agent + signature store, demo seed data
-└── frontend/            React + Vite — AIM/XP-styled UI
-    └── src/
-        ├── App.jsx
-        ├── api.js               REST + WebSocket client
-        ├── sounds.js             synthesized retro SFX (Web Audio API)
-        └── components/
-            ├── BuddyList.jsx
-            ├── ChatWindow.jsx     live negotiation over WebSocket
-            ├── TrustGraph.jsx     the webring-style trust visualization
-            ├── XPWindow.jsx       reusable XP chrome wrapper
-            └── AddAgentModal.jsx
-```
+├── backend/                  FastAPI — agents, signatures, trust graph, negotiation
+│   ├── main.py                 REST + WebSocket endpoints
+│   ├── crypto_utils.py          Ed25519 keygen / sign / verify / randomart fingerprint
+│   ├── trust_graph.py           Web-of-trust BFS, graph builder, Sybil-cluster detection
+│   ├── negotiation.py           LLM negotiation (Groq) with scripted fallback
+│   ├── store.py                 Agent/signature store, revocation, identity export/import
+│   ├── db.py                    SQLite persistence + schema migration
+│   └── .python-version          pins Python 3.11.9 for Render (pydantic-core wheel compat)
+└── frontend/                 React + Vite — Cyber-Y2K AIM-styled UI
+└── src/
+├── App.jsx                top-level layout, state, Sybil banner
+├── api.js                 REST + WebSocket client
+├── sounds.js               synthesized retro SFX (Web Audio API)
+├── index.css               design tokens, glass/chrome theme
+└── components/
+├── BuddyList.jsx        buddy list, add/import/inject/simulate actions
+├── ChatWindow.jsx        live negotiation over WebSocket
+├── TrustGraph.jsx        trust visualization, animated path trace, Sybil rings
+├── BuddyProfile.jsx      profile modal, revocation controls, identity export
+├── XPWindow.jsx          reusable glass-chrome window wrapper
+├── AddAgentModal.jsx     new/rogue agent creation
+└── SplashScreen.jsx      dial-up-style loading screen
 
 ## Running it locally
 
@@ -86,6 +96,9 @@ export GROQ_API_KEY=your_key_here   # Windows: set GROQ_API_KEY=your_key_here
 Without a key set, negotiations still run end-to-end using a deterministic scripted
 negotiation, so the demo always works even with zero setup.
 
+The SQLite file (`backend/agentaim.db`) is created automatically on first run and
+auto-migrates if you pull an update that adds new columns — no manual DB work needed.
+
 ### Frontend
 
 ```bash
@@ -100,68 +113,104 @@ backend at `http://localhost:8811` by default — change `VITE_API_URL` in
 
 ---
 
-## What's new since v1
+## Features
 
-- **Key fingerprint randomart** — every agent's public key now renders as a visual
-  ASCII fingerprint using the drunken-bishop algorithm (the same technique behind
-  `ssh-keygen -lv`), authentic to PGP/SSH crypto culture.
-- **Buddy profile window** — double-click any buddy to open a full profile: bio,
-  public key, randomart fingerprint, warn level, and complete signature history
-  (who vouched for them, who they've vouched for).
-- **Warn Level + auto-block** — a real revival of AIM's "Warn Level" meter,
-  repurposed as a fraud/risk indicator. Every failed trust negotiation raises an
-  agent's warn level; at 3 warnings it's auto-blocked and future negotiation
-  attempts are refused instantly, without even running the crypto check.
-- **"What the AI agent saw" panel** — the chat window now shows the raw JSON trust
-  context handed to the negotiating LLM before it reasons over it, so judges can
-  see this is a real agentic decision, not flavor text.
-- **SQLite persistence** — agents and signatures now survive server restarts
-  (`backend/agentaim.db`, auto-created on first run).
-- **Retro dial-up splash screen** — a brief nostalgic "connecting…" screen with a
-  synthesized modem-handshake sound on load.
-- **Functional window controls** — the × button now actually closes a window; a
-  "↺ Restore windows" button reappears in the header when any are closed.
-- **`/api/reset` safety net** — one click (or `curl -X POST /api/reset`) wipes the
-  demo back to its original 3 seed agents if a live demo goes sideways.
+### Core web of trust
+- Real Ed25519 keypairs, generated per agent, never leaving the backend's in-memory
+  store (in a production version each agent would hold its own private key).
+- Signing an attestation (`ATTEST|signer=X|subject=Y|key=...`) is a genuine digital
+  signature — independently verifiable with only the signer's public key.
+- Transitive trust computed live via BFS over verified, non-revoked signature edges.
+- **Warn Level + auto-block** — AIM's "Warn Level" meter, repurposed as a fraud/risk
+  indicator. Three failed trust checks auto-blocks an agent; blocked agents are
+  refused instantly, without even running the crypto check.
 
-## Demo script for judges (2 minutes)
+### Signature revocation
+PGP-style revocation certificates. Only the original signer can revoke their own
+attestation (`POST /api/revoke`). Revoked signatures stay visible in a profile's
+history (struck through, tagged "revoked") rather than disappearing, but the trust
+graph stops treating them as valid edges immediately — a live trust check will flip
+from TRUSTED to NOT TRUSTED the instant a signature on its path is revoked.
 
-1. **Show the buddy list** — ShopBot and PayBot are online with a real signature
-   history (`2 sig` badges). NewBot is "Away" with just one signature.
-2. **Click NewBot → Start negotiation.** Watch ShopBot and PayBot's history let
-   ShopBot trust NewBot *transitively* — the trust graph highlights the exact
-   2-hop signature path in green.
-3. **Click "⚠️ Inject rogue agent"** — creates a brand-new agent with zero
-   signatures, claiming to be trustworthy.
-4. **Select the rogue agent → Start negotiation.** The web of trust finds **no
-   verified path** — the negotiation ends in a hard `VERDICT: REJECT`, the graph
-   shows it isolated with a red ring, and a rejection tone plays. Its warn level
-   ticks up to 1.
-5. **Repeat 2 more times** — warn level hits 3, the agent is auto-blocked (moves
-   to a "Blocked" group in the buddy list with a 🚫 icon on the graph). Try
-   negotiating with it again — it's refused **instantly**, before any crypto
-   check even runs.
-6. **Double-click any agent** to open its profile — show the randomart fingerprint
-   and full signature history as extra proof this isn't just a UI mockup.
-7. **The punchline for judges:** this isn't a scripted "if malicious then reject"
-   check — ask to see `trust_graph.py`. Every edge is independently verified
-   with `Ed25519PublicKey.verify()`. A forged signature is provably invalid, not
-   just flagged by convention.
+### Sybil-cluster detection
+`GET /api/sybil-clusters` flags groups of agents that only ever vouch for each other
+— every edge between them is reciprocal — and that have zero connection to your own
+web of trust. This is a real graph-theoretic check, not a hardcoded rule: it survives
+the legitimate demo seed data (PayBot → NewBot isn't reciprocated, so it's never
+falsely flagged) while catching a fabricated ring instantly. The **"Simulate Sybil
+ring (demo)"** button spins up two agents that only sign each other so this is
+demoable live in one click — the graph immediately shows dashed amber rings and a
+🕸️ badge on the flagged nodes, plus a warning banner.
+
+### Animated trust-path trace
+Every time a trust check runs, a glowing pulse travels hop-by-hop along the verified
+signature path on the graph, so the BFS result reads as something that's actually
+computed live, not a static illustration.
+
+### Identity export / import
+`⭳ Export identity` in any buddy's profile downloads a full portable keyfile — public
+key, private key, and complete signature history — analogous to exporting a PGP
+secret key block. `⭱ Import identity` in the buddy list re-registers it, including
+replaying any signature history bundled with it. Because the attestation message
+itself encodes the signer's ID (`ATTEST|signer=<id>|...`), a keyfile can only restore
+history under its **original** agent ID — renaming on import intentionally breaks the
+signature binding, the same way it would in real PGP. This makes `/api/reset` genuinely
+safe to demo with: export an agent's identity beforehand, wipe the demo live, and
+restore it in front of judges to prove persistence isn't just SQLite convenience.
+
+### "What the AI agent saw" panel
+The chat window shows the raw JSON trust context handed to the negotiating LLM before
+it reasons over it, so judges can see this is a real agentic decision grounded in the
+crypto layer, not flavor text.
+
+### Cyber-Y2K UI
+Glass-chrome windows with a diagonal titlebar sheen, glowing chrome-orb trust-graph
+nodes, a faceted chrome-shard accent motif, faint CRT scanline grain, and a
+retro dial-up splash screen with a synthesized modem-handshake sound — the "Cybercore"
+2000s aesthetic (translucent hardware, early internet futurism), not a flat XP clone.
+
+---
+
+## Demo script for judges
+
+See `DEMO_SCRIPT.md` (or the walkthrough below) for a full talk-track. Short version:
+
+1. Show the buddy list — real signature history, warn levels, live status.
+2. Negotiate with NewBot — watch a 2-hop transitive trust path get verified live.
+3. Inject a rogue agent — watch it get rejected, warn level rise, eventual auto-block.
+4. Revoke a signature live — watch a previously trusted path break in real time.
+5. Simulate a Sybil ring — watch the detector flag it algorithmically, live.
+6. Export an identity, reset the demo, re-import it — prove persistence is real.
+7. Open `trust_graph.py` — show judges the actual `Ed25519PublicKey.verify()` call.
+   Nothing here is a mocked trust score.
 
 ---
 
 ## Deployment
 
-- **Backend** → Render (Web Service, `uvicorn main:app --host 0.0.0.0 --port $PORT`)
-- **Frontend** → Vercel (set `VITE_API_URL` to the deployed backend URL)
+- **Backend** → Render (Web Service, root directory `backend`, build command
+  `pip install -r requirements.txt`, start command
+  `uvicorn main:app --host 0.0.0.0 --port $PORT`). `GROQ_API_KEY` is set directly in
+  Render's dashboard and never committed. `backend/.python-version` pins Python to
+  3.11.9 — Render's default (3.14 at time of writing) doesn't have prebuilt wheels
+  for the pinned `pydantic-core` version, which breaks the build without this file.
+- **Frontend** → Vercel (root directory `frontend`, environment variable
+  `VITE_API_URL` set to the deployed Render backend URL, no trailing slash).
+
+**Known caveat:** Render's free tier has an ephemeral filesystem — the SQLite DB
+resets whenever the service spins down from inactivity and wakes back up. This is
+expected, not a bug. It's also exactly what the identity export/import feature is
+for — export an agent's identity as a safety net before a live demo.
 
 ## What's mocked vs. real (for full transparency to judges)
 
 - **Real:** Ed25519 key generation, signing, and verification. The BFS trust-path
-  search only walks edges that pass independent cryptographic verification.
+  search only walks edges that pass independent cryptographic verification and
+  haven't been revoked. Sybil-cluster detection is a real graph analysis over the
+  actual signature graph, not a hardcoded agent-name check.
 - **Real (with a Groq key):** the negotiation dialogue is generated live by an LLM
   reasoning over the actual trust-graph result for that specific agent pair.
 - **Simulated for demo purposes:** agents don't run on separate physical hosts —
-  all keypairs live in one in-memory store for the hackathon build. In a
-  production version, each agent would hold its own private key and only ever
-  publish its public key.
+  all keypairs live in one in-memory/SQLite-backed store for the hackathon build.
+  In a production version, each agent would generate and hold its own private key
+  locally and only ever publish its public key.

@@ -35,6 +35,39 @@ export async function createAgent({ name, avatar, bio, malicious }) {
   return res.json();
 }
 
+export async function revokeSignature(signerId, subjectId) {
+  const res = await fetch(`${BASE}/api/revoke`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ signer_id: signerId, subject_id: subjectId }),
+  });
+  return res.json();
+}
+
+export async function getSybilClusters(selfId) {
+  const res = await fetch(`${BASE}/api/sybil-clusters?self_id=${encodeURIComponent(selfId)}`);
+  return res.json();
+}
+
+export async function simulateSybilRing() {
+  const res = await fetch(`${BASE}/api/simulate-sybil-ring`, { method: "POST" });
+  return res.json();
+}
+
+export async function exportIdentity(agentId) {
+  const res = await fetch(`${BASE}/api/agents/${agentId}/export`);
+  return res.json();
+}
+
+export async function importIdentity(identityJson) {
+  const res = await fetch(`${BASE}/api/agents/import`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(identityJson),
+  });
+  return res.json();
+}
+
 export function openNegotiationSocket(agentAId, agentBId, onMessage, onClose) {
   const ws = new WebSocket(`${WS_BASE}/ws/negotiate/${agentAId}/${agentBId}`);
   ws.onmessage = (evt) => onMessage(JSON.parse(evt.data));

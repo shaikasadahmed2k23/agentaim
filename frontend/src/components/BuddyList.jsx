@@ -1,9 +1,27 @@
+import { useRef } from "react";
 import XPWindow from "./XPWindow";
 
-export default function BuddyList({ agents, selectedId, onSelect, onOpenProfile, onAddAgent, onAddRogue, onClose }) {
+export default function BuddyList({
+  agents, selectedId, onSelect, onOpenProfile, onAddAgent, onAddRogue,
+  onImportIdentity, onSimulateSybilRing, onClose,
+}) {
+  const fileInputRef = useRef(null);
   const online = agents.filter((a) => a.status === "online");
   const away = agents.filter((a) => a.status === "away");
   const blocked = agents.filter((a) => a.status === "blocked");
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      await onImportIdentity(json);
+    } catch (err) {
+      alert(`Couldn't import that identity file: ${err.message}`);
+    }
+  };
 
   const Row = (a) => (
     <div
@@ -52,7 +70,20 @@ export default function BuddyList({ agents, selectedId, onSelect, onOpenProfile,
         )}
         <div className="buddy-list-footer">
           <button className="add-agent-btn" onClick={onAddAgent}>+ Add a new agent</button>
+          <button className="add-agent-btn" onClick={() => fileInputRef.current?.click()}>
+            ⭱ Import identity
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json"
+            style={{ display: "none" }}
+            onChange={handleFileChange}
+          />
           <button className="rogue-btn" onClick={onAddRogue}>⚠️ Inject rogue agent (demo)</button>
+          <button className="rogue-btn" onClick={onSimulateSybilRing}>
+            🕸️ Simulate Sybil ring (demo)
+          </button>
         </div>
       </div>
     </XPWindow>
